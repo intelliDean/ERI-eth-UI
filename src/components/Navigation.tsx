@@ -1,62 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Shield, User, Factory, Menu, X } from 'lucide-react';
-import { ethers } from 'ethers';
-import { toast } from 'react-toastify';
+import { useWallet } from '../contexts/WalletContext';
 
 const Navigation = () => {
-  const [account, setAccount] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    // Listen for account changes
-    if (typeof window.ethereum !== 'undefined') {
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts.length === 0) {
-          // User disconnected wallet
-          setAccount(null);
-          toast.info('Wallet disconnected');
-        } else if (account && accounts[0] !== account) {
-          // User switched accounts
-          setAccount(accounts);
-          toast.success(`Switched to: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
-        }
-      };
-
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-
-      // Cleanup listener on unmount
-      return () => {
-        if (window.ethereum?.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        }
-      };
-    }
-  }, [account]);
-
-  const connectWallet = async () => {
-    if (typeof window.ethereum === 'undefined') {
-      toast.error('Please install MetaMask!');
-      return;
-    }
-
-    try {
-      if (!account) {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
-        setAccount(address);
-        toast.success(`Connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
-      } else {
-        setAccount(null);
-        toast.success('Wallet disconnected');
-      }
-    } catch (error: any) {
-      toast.error(`Error: ${error.message}`);
-    }
-  };
+  const { account, connectWallet } = useWallet();
 
   const isActive = (path: string) => location.pathname === path;
 

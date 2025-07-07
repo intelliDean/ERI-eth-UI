@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
 import { toast } from 'react-toastify';
 import {
   Factory,
@@ -13,22 +12,24 @@ import {
   Download
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { AUTHENTICITY_ABI } from '../contracts/authenticityABI';
 import { parseError, signTypedData } from '../utils/blockchain';
-
-const AUTHENTICITY_ADDRESS = import.meta.env.VITE_AUTHENTICITY;
+import { useWallet } from '../contexts/WalletContext';
+import { ethers } from 'ethers';
 
 const ManufacturerDashboard = () => {
-  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-  const [signer, setSigner] = useState<ethers.Signer | null>(null);
-  const [account, setAccount] = useState<string | null>(null);
-  const [rContract, setRContract] = useState<ethers.Contract | null>(null);
-  const [sContract, setSContract] = useState<ethers.Contract | null>(null);
+  const {
+    account,
+    signer,
+    chainId,
+    authenticitySContract,
+    isManufacturerRegistered,
+    manufacturerRegisteredName,
+    connectWallet,
+    checkManufacturerRegistration
+  } = useWallet();
+  
   const [activeTab, setActiveTab] = useState('overview');
   const [manufacturerName, setManufacturerName] = useState('');
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [registeredName, setRegisteredName] = useState('');
-  const [chainId, setChainId] = useState<number>(0);
   const [qrCodeData, setQrCodeData] = useState('');
   const [signature, setSignature] = useState('');
 
@@ -39,89 +40,20 @@ const ManufacturerDashboard = () => {
     metadata: ''
   });
 
-  useEffect(() => {
-    if (typeof window.ethereum !== "undefined") {
-      const web3Provider = new ethers.BrowserProvider(window.ethereum);
-      setProvider(web3Provider);
-      setRContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, web3Provider));
-    } else {
-      setProvider(ethers.getDefaultProvider);
-      toast.error("Please install MetaMask!");
-    }
-  }, []);
-
-  const connectWallet = async () => {
-    if (!provider) {
-      return toast.error("MetaMask not detected");
-    }
-
-    try {
-      if (!account) {
-        await window.ethereum.request({method: "eth_requestAccounts"});
-        const signer = await provider.getSigner();
-
-        const network = await provider.getNetwork();
-        setChainId(Number(network.chainId));
-
-        const address = await signer.getAddress();
-        setSigner(signer);
-        setAccount(address);
-        setSContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, signer));
-
-        console.log("Chain ID", network.chainId);
-
-        // Check if manufacturer is registered and get their name
-        await checkManufacturerRegistration(address);
-
-        toast.success(`Connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
-
-        return;
-      }
-
-      //to disconnect wallet
-      setSigner(null);
-      setAccount(null);
-      setIsRegistered(false);
-      setRegisteredName('');
-      const network = await provider.getNetwork();
-      setChainId(Number(network.chainId));
-
-      setRContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, provider)); // to call view function
-      toast.success("Wallet disconnected");
-
-    } catch (error: any) {
-      toast.error(`Error: ${error.message}`);
-    }
-  };
-
-  const checkManufacturerRegistration = async (address: string) => {
-    if (!rContract) return;
-    
-    try {
-      const manufacturer = await rContract.getManufacturer(address);
-      if (manufacturer.name && manufacturer.name.trim() !== '') {
-        setIsRegistered(true);
-        setRegisteredName(manufacturer.name);
-      }
-    } catch (error) {
-      // Manufacturer not registered, which is fine
-      setIsRegistered(false);
-      setRegisteredName('');
-    }
-  };
-
   const registerManufacturer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sContract || !manufacturerName.trim()) {
+    if (!authenticitySContract || !manufacturerName.trim()) {
       toast.error('Please enter a manufacturer name');
       return;
     }
 
     try {
-      const tx = await sContract.manufacturerRegisters(manufacturerName);
+      const tx = await authenticitySContract.manufacturerRegisters(manufacturerName);
       await tx.wait();
-      setIsRegistered(true);
-      setRegisteredName(manufacturerName);
+      
+      // Refresh registration status
+      await checkManufacturerRegistration();
+      
       toast.success(`Manufacturer "${manufacturerName}" registered successfully!`);
       setManufacturerName('');
     } catch (error: any) {
@@ -131,7 +63,7 @@ const ManufacturerDashboard = () => {
 
   const createCertificate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sContract || !signer) {
+    if (!authenticitySContract || !signer) {
       toast.error('Please connect your wallet');
       return;
     }
@@ -239,17 +171,17 @@ const ManufacturerDashboard = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Manufacturer Dashboard</h1>
                 <p className="text-gray-600">
-                  {registeredName ? `Welcome, ${registeredName}` : `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`}
+                  {manufacturerRegisteredName ? `Welcome, ${manufacturerRegisteredName}` : `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                isRegistered 
+                isManufacturerRegistered 
                   ? 'bg-green-100 text-green-700' 
                   : 'bg-yellow-100 text-yellow-700'
               }`}>
-                {isRegistered ? 'Registered' : 'Not Registered'}
+                {isManufacturerRegistered ? 'Registered' : 'Not Registered'}
               </div>
             </div>
           </div>
@@ -308,15 +240,15 @@ const ManufacturerDashboard = () => {
                     <div className="grid md:grid-cols-2 gap-4">
                       <button
                         onClick={() => setActiveTab('register')}
-                        disabled={isRegistered}
+                        disabled={isManufacturerRegistered}
                         className={`flex items-center space-x-3 p-4 rounded-lg border-2 border-dashed transition-all duration-300 ${
-                          isRegistered
+                          isManufacturerRegistered
                             ? 'border-gray-200 text-gray-400 cursor-not-allowed'
                             : 'border-emerald-300 text-emerald-600 hover:border-emerald-400 hover:bg-emerald-50'
                         }`}
                       >
                         <Plus className="h-5 w-5" />
-                        <span>{isRegistered ? 'Already Registered' : 'Register as Manufacturer'}</span>
+                        <span>{isManufacturerRegistered ? 'Already Registered' : 'Register as Manufacturer'}</span>
                       </button>
                       <button
                         onClick={() => setActiveTab('certificates')}
@@ -334,7 +266,7 @@ const ManufacturerDashboard = () => {
               {activeTab === 'register' && (
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Register as Manufacturer</h2>
-                  {!isRegistered ? (
+                  {!isManufacturerRegistered ? (
                     <form onSubmit={registerManufacturer} className="space-y-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">

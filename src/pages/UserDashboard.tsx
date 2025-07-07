@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
 import { toast } from 'react-toastify';
 import {
   User,
@@ -14,28 +13,27 @@ import {
   Download,
   Upload
 } from 'lucide-react';
-import { OWNERSHIP_ABI } from '../contracts/ownershipABI';
-import { AUTHENTICITY_ABI } from '../contracts/authenticityABI';
 import { parseError, signTypedData } from '../utils/blockchain';
 import { getEvents } from '../utils/getEvents';
-
-const OWNERSHIP_ADDRESS = import.meta.env.VITE_OWNERSHIP;
-const AUTHENTICITY_ADDRESS = import.meta.env.VITE_AUTHENTICITY;
+import { useWallet } from '../contexts/WalletContext';
+import { ethers } from 'ethers';
 
 const UserDashboard = () => {
-  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-  const [signer, setSigner] = useState<ethers.Signer | null>(null);
-  const [account, setAccount] = useState<string | null>(null);
-  const [ownershipRContract, setOwnershipRContract] = useState<ethers.Contract | null>(null);
-  const [ownershipSContract, setOwnershipSContract] = useState<ethers.Contract | null>(null);
-  const [authenticityRContract, setAuthenticityRContract] = useState<ethers.Contract | null>(null);
-  const [authenticitySContract, setAuthenticitySContract] = useState<ethers.Contract | null>(null);
+  const {
+    account,
+    ownershipRContract,
+    ownershipSContract,
+    authenticityRContract,
+    authenticitySContract,
+    isUserRegistered,
+    userRegisteredName,
+    connectWallet,
+    checkUserRegistration
+  } = useWallet();
+  
   const [activeTab, setActiveTab] = useState('overview');
   const [username, setUsername] = useState('');
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [registeredName, setRegisteredName] = useState('');
   const [myItems, setMyItems] = useState<any[]>([]);
-  const [chainId, setChainId] = useState<number>(0);
 
   const [verificationData, setVerificationData] = useState({
     name: '',
@@ -56,80 +54,6 @@ const UserDashboard = () => {
     ownershipCode: ''
   });
 
-  useEffect(() => {
-    if (typeof window.ethereum !== "undefined") {
-      const web3Provider = new ethers.BrowserProvider(window.ethereum);
-      setProvider(web3Provider);
-      setOwnershipRContract(new ethers.Contract(OWNERSHIP_ADDRESS, OWNERSHIP_ABI, web3Provider));
-      setAuthenticityRContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, web3Provider));
-    } else {
-      setProvider(ethers.getDefaultProvider);
-      toast.error("Please install MetaMask!");
-    }
-  }, []);
-
-  const connectWallet = async () => {
-    if (!provider) {
-      return toast.error("MetaMask not detected");
-    }
-
-    try {
-      if (!account) {
-        await window.ethereum.request({method: "eth_requestAccounts"});
-        const signer = await provider.getSigner();
-
-        const network = await provider.getNetwork();
-        setChainId(Number(network.chainId));
-
-        const address = await signer.getAddress();
-        setSigner(signer);
-        setAccount(address);
-        setOwnershipSContract(new ethers.Contract(OWNERSHIP_ADDRESS, OWNERSHIP_ABI, signer));
-        setAuthenticitySContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, signer));
-
-        console.log("Chain ID", network.chainId);
-
-        // Check if user is registered and get their name
-        await checkUserRegistration(address);
-
-        toast.success(`Connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
-
-        return;
-      }
-
-      //to disconnect wallet
-      setSigner(null);
-      setAccount(null);
-      setIsRegistered(false);
-      setRegisteredName('');
-      const network = await provider.getNetwork();
-      setChainId(Number(network.chainId));
-
-      setOwnershipRContract(new ethers.Contract(OWNERSHIP_ADDRESS, OWNERSHIP_ABI, provider)); // to call view function
-      setAuthenticityRContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, provider)); // to call view function
-      toast.success("Wallet disconnected");
-
-    } catch (error: any) {
-      toast.error(`Error: ${error.message}`);
-    }
-  };
-
-  const checkUserRegistration = async (address: string) => {
-    if (!ownershipRContract) return;
-    
-    try {
-      const user = await ownershipRContract.getUser(address);
-      if (user.isRegistered && user.username && user.username.trim() !== '') {
-        setIsRegistered(true);
-        setRegisteredName(user.username);
-      }
-    } catch (error) {
-      // User not registered, which is fine
-      setIsRegistered(false);
-      setRegisteredName('');
-    }
-  };
-
   const registerUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ownershipSContract || !username.trim()) {
@@ -144,8 +68,10 @@ const UserDashboard = () => {
       
       const tx = await ownershipSContract.userRegisters(username);
       await tx.wait();
-      setIsRegistered(true);
-      setRegisteredName(username);
+      
+      // Refresh registration status
+      await checkUserRegistration();
+      
       toast.success(`User "${username}" registered successfully!`);
       setUsername('');
     } catch (error: any) {
@@ -351,17 +277,17 @@ const UserDashboard = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">User Dashboard</h1>
                 <p className="text-gray-600">
-                  {registeredName ? `Welcome, ${registeredName}` : `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`}
+                  {userRegisteredName ? `Welcome, ${userRegisteredName}` : `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                isRegistered 
+                isUserRegistered 
                   ? 'bg-green-100 text-green-700' 
                   : 'bg-yellow-100 text-yellow-700'
               }`}>
-                {isRegistered ? 'Registered' : 'Not Registered'}
+                {isUserRegistered ? 'Registered' : 'Not Registered'}
               </div>
             </div>
           </div>
@@ -441,7 +367,7 @@ const UserDashboard = () => {
               {activeTab === 'register' && (
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Register as User</h2>
-                  {!isRegistered ? (
+                  {!isUserRegistered ? (
                     <form onSubmit={registerUser} className="space-y-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
