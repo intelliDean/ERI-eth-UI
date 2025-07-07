@@ -68,7 +68,7 @@ const UserDashboard = () => {
     
     try {
       setIsLoadingItems(true);
-      const items = await ownershipRContract.getAllMyItems();
+      const items = await ownershipSContract.getAllMyItems();
       setMyItems(items || []);
     } catch (error: any) {
       console.error('Error loading items:', error);
