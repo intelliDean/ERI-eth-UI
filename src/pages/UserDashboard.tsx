@@ -17,7 +17,15 @@ import {
 import { parseError, signTypedData } from '../utils/blockchain';
 import { getEvents } from '../utils/getEvents';
 import { useWallet } from '../contexts/WalletContext';
+import { 
+  createNotification, 
+  saveTransferCode, 
+  revokeTransferCode, 
+  getActiveTransferCodes,
+  TransferCodeData 
+} from '../lib/supabase';
 import { ethers } from 'ethers';
+import { useLocation } from 'react-router-dom';
 
 const UserDashboard = () => {
   const {
@@ -36,6 +44,8 @@ const UserDashboard = () => {
   const [username, setUsername] = useState('');
   const [myItems, setMyItems] = useState<any[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [activeTransferCodes, setActiveTransferCodes] = useState<TransferCodeData[]>([]);
+  const location = useLocation();
 
   const [verificationData, setVerificationData] = useState({
     name: '',
@@ -60,8 +70,19 @@ const UserDashboard = () => {
   useEffect(() => {
     if (account && isUserRegistered && ownershipRContract) {
       loadMyItems();
+      loadActiveTransferCodes();
     }
   }, [account, isUserRegistered, ownershipRContract]);
+
+  // Handle navigation state for auto-filling claim form
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+    if (location.state?.ownershipCode) {
+      setClaimData({ ownershipCode: location.state.ownershipCode });
+    }
+  }, [location.state]);
 
   const loadMyItems = async () => {
     if (!ownershipRContract || !account) return;
@@ -79,6 +100,17 @@ const UserDashboard = () => {
       setMyItems([]);
     } finally {
       setIsLoadingItems(false);
+    }
+  };
+
+  const loadActiveTransferCodes = async () => {
+    if (!account) return;
+    
+    try {
+      const codes = await getActiveTransferCodes(account);
+      setActiveTransferCodes(codes);
+    } catch (error) {
+      console.error('Error loading transfer codes:', error);
     }
   };
 
@@ -226,7 +258,57 @@ const UserDashboard = () => {
       const receipt = await tx.wait();
       
       const eventData = getEvents(ownershipSContract, receipt, 'OwnershipCode');
-      toast.success(`Transfer code generated: ${eventData.ownershipCode}`);
+      const ownershipCode = eventData.ownershipCode;
+      
+      // Find the item details
+      const item = myItems.find(item => item.itemId === transferData.itemId);
+      
+      // Save transfer code to Supabase
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+      
+      await saveTransferCode({
+        item_id: transferData.itemId,
+        item_name: item?.name || 'Unknown Item',
+        from_address: account.toLowerCase(),
+        to_address: transferData.tempOwnerAddress.toLowerCase(),
+        ownership_code: ownershipCode,
+        is_active: true,
+        expires_at: expiresAt.toISOString()
+      });
+      
+      // Create notifications
+      await Promise.all([
+        // Notification for the recipient (User B)
+        createNotification({
+          user_address: transferData.tempOwnerAddress.toLowerCase(),
+          type: 'transfer_code_generated',
+          title: 'New Ownership Transfer',
+          message: `You have received ownership transfer for "${item?.name || 'Unknown Item'}"`,
+          item_id: transferData.itemId,
+          item_name: item?.name || 'Unknown Item',
+          from_address: account.toLowerCase(),
+          to_address: transferData.tempOwnerAddress.toLowerCase(),
+          ownership_code: ownershipCode
+        }),
+        // Notification for the sender (User A)
+        createNotification({
+          user_address: account.toLowerCase(),
+          type: 'transfer_code_generated',
+          title: 'Transfer Code Generated',
+          message: `Transfer code created for "${item?.name || 'Unknown Item'}"`,
+          item_id: transferData.itemId,
+          item_name: item?.name || 'Unknown Item',
+          from_address: account.toLowerCase(),
+          to_address: transferData.tempOwnerAddress.toLowerCase(),
+          ownership_code: ownershipCode
+        })
+      ]);
+      
+      toast.success(`Transfer code generated and notifications sent!`);
+      
+      // Refresh active transfer codes
+      await loadActiveTransferCodes();
       
       setTransferData({
         itemId: '',
@@ -234,6 +316,55 @@ const UserDashboard = () => {
       });
     } catch (error: any) {
       toast.error(`Transfer code generation failed: ${parseError(error)}`);
+    }
+  };
+
+  const handleRevokeTransferCode = async (transferCode: TransferCodeData) => {
+    if (!ownershipSContract) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    try {
+      // Revoke on blockchain
+      const tx = await ownershipSContract.ownerRevokeCode(transferCode.ownership_code);
+      await tx.wait();
+      
+      // Revoke in Supabase
+      await revokeTransferCode(transferCode.ownership_code);
+      
+      // Create notifications
+      await Promise.all([
+        // Notification for the recipient (User B)
+        createNotification({
+          user_address: transferCode.to_address,
+          type: 'transfer_code_revoked',
+          title: 'Transfer Code Revoked',
+          message: `Transfer code for "${transferCode.item_name}" has been revoked`,
+          item_id: transferCode.item_id,
+          item_name: transferCode.item_name,
+          from_address: transferCode.from_address,
+          to_address: transferCode.to_address
+        }),
+        // Notification for the sender (User A)
+        createNotification({
+          user_address: account!.toLowerCase(),
+          type: 'transfer_code_revoked',
+          title: 'Transfer Code Revoked',
+          message: `You revoked the transfer code for "${transferCode.item_name}"`,
+          item_id: transferCode.item_id,
+          item_name: transferCode.item_name,
+          from_address: transferCode.from_address,
+          to_address: transferCode.to_address
+        })
+      ]);
+      
+      toast.success('Transfer code revoked successfully!');
+      
+      // Refresh active transfer codes
+      await loadActiveTransferCodes();
+    } catch (error: any) {
+      toast.error(`Revoke failed: ${parseError(error)}`);
     }
   };
 
@@ -252,7 +383,29 @@ const UserDashboard = () => {
       const tx = await ownershipSContract.newOwnerClaimOwnership(claimData.ownershipCode);
       const receipt = await tx.wait();
       
-      const eventData = getEvents(ownershipSContract, receipt, 'OwnershipClaimed');
+      // Create notification for successful claim
+      try {
+        // Try to get transfer code details for better notification
+        const transferCodeDetails = activeTransferCodes.find(
+          code => code.ownership_code === claimData.ownershipCode
+        );
+        
+        if (transferCodeDetails) {
+          await createNotification({
+            user_address: transferCodeDetails.from_address,
+            type: 'ownership_claimed',
+            title: 'Ownership Claimed',
+            message: `"${transferCodeDetails.item_name}" ownership has been claimed`,
+            item_id: transferCodeDetails.item_id,
+            item_name: transferCodeDetails.item_name,
+            from_address: transferCodeDetails.from_address,
+            to_address: account.toLowerCase()
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error creating claim notification:', notificationError);
+      }
+      
       toast.success('Ownership claimed with code successfully!');
       
       // Refresh items list
@@ -696,6 +849,36 @@ const UserDashboard = () => {
                       Generate Transfer Code
                     </button>
                   </form>
+                  
+                  {/* Active Transfer Codes */}
+                  {activeTransferCodes.length > 0 && (
+                    <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-600">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Active Transfer Codes</h3>
+                      <div className="space-y-4">
+                        {activeTransferCodes.map((transferCode) => (
+                          <div key={transferCode.id} className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium text-gray-900 dark:text-white">{transferCode.item_name}</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">
+                                  To: {transferCode.to_address.slice(0, 6)}...{transferCode.to_address.slice(-4)}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Created: {new Date(transferCode.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => handleRevokeTransferCode(transferCode)}
+                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-300 text-sm"
+                              >
+                                Revoke
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
