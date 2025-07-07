@@ -154,7 +154,6 @@ const ManufacturerDashboard = () => {
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <Factory className="h-8 w-8 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               Manufacturer Dashboard
             </h2>
