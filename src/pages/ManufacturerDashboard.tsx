@@ -102,7 +102,9 @@ const ManufacturerDashboard = () => {
       const qrData = JSON.stringify({ cert, signature });
       
       // Create URL with certificate data for QR code
-      const baseUrl = window.location.origin;
+      // For development, you can use ngrok or similar service to create a public URL
+      // For production, this will use the actual domain
+      const baseUrl = import.meta.env.VITE_PUBLIC_URL || window.location.origin;
       const certParam = encodeURIComponent(JSON.stringify(cert));
       const sigParam = encodeURIComponent(signature);
       const verifyUrl = `${baseUrl}/verify?cert=${certParam}&sig=${sigParam}`;
