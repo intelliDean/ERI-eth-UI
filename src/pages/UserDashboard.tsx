@@ -1,0 +1,751 @@
+import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+import { toast } from 'react-toastify';
+import {
+  User,
+  Shield,
+  Scan,
+  Package,
+  ArrowRightLeft,
+  Key,
+  CheckCircle,
+  Plus,
+  Search,
+  Download,
+  Upload
+} from 'lucide-react';
+import { OWNERSHIP_ABI } from '../contracts/ownershipABI';
+import { AUTHENTICITY_ABI } from '../contracts/authenticityABI';
+import { parseError, signTypedData } from '../utils/blockchain';
+import { getEvents } from '../utils/getEvents';
+
+const OWNERSHIP_ADDRESS = import.meta.env.VITE_OWNERSHIP;
+const AUTHENTICITY_ADDRESS = import.meta.env.VITE_AUTHENTICITY;
+
+const UserDashboard = () => {
+  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
+  const [signer, setSigner] = useState<ethers.Signer | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
+  const [ownershipRContract, setOwnershipRContract] = useState<ethers.Contract | null>(null);
+  const [ownershipSContract, setOwnershipSContract] = useState<ethers.Contract | null>(null);
+  const [authenticityRContract, setAuthenticityRContract] = useState<ethers.Contract | null>(null);
+  const [authenticitySContract, setAuthenticitySContract] = useState<ethers.Contract | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [username, setUsername] = useState('');
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registeredName, setRegisteredName] = useState('');
+  const [myItems, setMyItems] = useState<any[]>([]);
+  const [chainId, setChainId] = useState<number>(0);
+
+  const [verificationData, setVerificationData] = useState({
+    name: '',
+    uniqueId: '',
+    serial: '',
+    date: '',
+    owner: '',
+    metadata: '',
+    signature: ''
+  });
+
+  const [transferData, setTransferData] = useState({
+    itemId: '',
+    tempOwnerAddress: ''
+  });
+
+  const [claimData, setClaimData] = useState({
+    ownershipCode: ''
+  });
+
+  useEffect(() => {
+    if (typeof window.ethereum !== "undefined") {
+      const web3Provider = new ethers.BrowserProvider(window.ethereum);
+      setProvider(web3Provider);
+      setOwnershipRContract(new ethers.Contract(OWNERSHIP_ADDRESS, OWNERSHIP_ABI, web3Provider));
+      setAuthenticityRContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, web3Provider));
+    } else {
+      setProvider(ethers.getDefaultProvider);
+      toast.error("Please install MetaMask!");
+    }
+  }, []);
+
+  const connectWallet = async () => {
+    if (!provider) {
+      return toast.error("MetaMask not detected");
+    }
+
+    try {
+      if (!account) {
+        await window.ethereum.request({method: "eth_requestAccounts"});
+        const signer = await provider.getSigner();
+
+        const network = await provider.getNetwork();
+        setChainId(Number(network.chainId));
+
+        const address = await signer.getAddress();
+        setSigner(signer);
+        setAccount(address);
+        setOwnershipSContract(new ethers.Contract(OWNERSHIP_ADDRESS, OWNERSHIP_ABI, signer));
+        setAuthenticitySContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, signer));
+
+        console.log("Chain ID", network.chainId);
+
+        // Check if user is registered and get their name
+        await checkUserRegistration(address);
+
+        toast.success(`Connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
+
+        return;
+      }
+
+      //to disconnect wallet
+      setSigner(null);
+      setAccount(null);
+      setIsRegistered(false);
+      setRegisteredName('');
+      const network = await provider.getNetwork();
+      setChainId(Number(network.chainId));
+
+      setOwnershipRContract(new ethers.Contract(OWNERSHIP_ADDRESS, OWNERSHIP_ABI, provider)); // to call view function
+      setAuthenticityRContract(new ethers.Contract(AUTHENTICITY_ADDRESS, AUTHENTICITY_ABI, provider)); // to call view function
+      toast.success("Wallet disconnected");
+
+    } catch (error: any) {
+      toast.error(`Error: ${error.message}`);
+    }
+  };
+
+  const checkUserRegistration = async (address: string) => {
+    if (!ownershipRContract) return;
+    
+    try {
+      const user = await ownershipRContract.getUser(address);
+      if (user.isRegistered && user.username && user.username.trim() !== '') {
+        setIsRegistered(true);
+        setRegisteredName(user.username);
+      }
+    } catch (error) {
+      // User not registered, which is fine
+      setIsRegistered(false);
+      setRegisteredName('');
+    }
+  };
+
+  const registerUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ownershipSContract || !username.trim()) {
+      toast.error('Please enter a username');
+      return;
+    }
+
+    try {
+      if (username.length < 3) {
+        throw new Error('Username must be at least 3 characters');
+      }
+      
+      const tx = await ownershipSContract.userRegisters(username);
+      await tx.wait();
+      setIsRegistered(true);
+      setRegisteredName(username);
+      toast.success(`User "${username}" registered successfully!`);
+      setUsername('');
+    } catch (error: any) {
+      toast.error(`Registration failed: ${parseError(error)}`);
+    }
+  };
+
+  const verifyProductAuthenticity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authenticityRContract) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    try {
+      if (!verificationData.name || !verificationData.uniqueId || !verificationData.serial || 
+          !verificationData.date || !verificationData.owner || !verificationData.metadata || 
+          !verificationData.signature) {
+        throw new Error('All fields are required for verification');
+      }
+      
+      const metadata = verificationData.metadata.split(',').map(item => item.trim()).filter(Boolean);
+      
+      const cert = {
+        name: verificationData.name,
+        uniqueId: verificationData.uniqueId,
+        serial: verificationData.serial,
+        date: parseInt(verificationData.date),
+        owner: verificationData.owner,
+        metadataHash: ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['string[]'], [metadata])),
+        metadata
+      };
+      
+      const result = await authenticityRContract.verifyAuthenticity(cert, verificationData.signature);
+      const isValid = result[0];
+      const manufacturerName = result[1];
+      
+      if (isValid) {
+        toast.success(`Product "${verificationData.name}" is authentic! Manufacturer: ${manufacturerName}`);
+      } else {
+        toast.error('Product authenticity could not be verified!');
+      }
+      
+      setVerificationData({
+        name: '',
+        uniqueId: '',
+        serial: '',
+        date: '',
+        owner: '',
+        metadata: '',
+        signature: ''
+      });
+    } catch (error: any) {
+      toast.error(`Verification failed: ${parseError(error)}`);
+    }
+  };
+
+  const claimOwnership = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authenticitySContract) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    try {
+      if (!verificationData.name || !verificationData.uniqueId || !verificationData.signature) {
+        throw new Error('Product name, unique ID, and signature are required');
+      }
+      
+      const metadata = verificationData.metadata.split(',').map(item => item.trim()).filter(Boolean);
+      
+      const cert = {
+        name: verificationData.name,
+        uniqueId: verificationData.uniqueId,
+        serial: verificationData.serial,
+        date: parseInt(verificationData.date),
+        owner: verificationData.owner,
+        metadataHash: ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['string[]'], [metadata])),
+        metadata
+      };
+      
+      const tx = await authenticitySContract.userClaimOwnership(cert, verificationData.signature);
+      await tx.wait();
+      
+      toast.success('Ownership claimed successfully!');
+      setVerificationData({
+        name: '',
+        uniqueId: '',
+        serial: '',
+        date: '',
+        owner: '',
+        metadata: '',
+        signature: ''
+      });
+    } catch (error: any) {
+      toast.error(`Claim failed: ${parseError(error)}`);
+    }
+  };
+
+  const generateTransferCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ownershipSContract) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    try {
+      if (!transferData.itemId || !transferData.tempOwnerAddress) {
+        throw new Error('Item ID and temporary owner address are required');
+      }
+      
+      if (!ethers.isAddress(transferData.tempOwnerAddress)) {
+        throw new Error('Invalid temporary owner address');
+      }
+      
+      const tx = await ownershipSContract.generateChangeOfOwnershipCode(
+        transferData.itemId, 
+        transferData.tempOwnerAddress
+      );
+      const receipt = await tx.wait();
+      
+      const eventData = getEvents(ownershipSContract, receipt, 'OwnershipCode');
+      toast.success(`Transfer code generated: ${eventData.ownershipCode}`);
+      
+      setTransferData({
+        itemId: '',
+        tempOwnerAddress: ''
+      });
+    } catch (error: any) {
+      toast.error(`Transfer code generation failed: ${parseError(error)}`);
+    }
+  };
+
+  const claimWithCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ownershipSContract) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    try {
+      if (!claimData.ownershipCode || !ethers.isBytesLike(claimData.ownershipCode)) {
+        throw new Error('Valid ownership code required');
+      }
+      
+      const tx = await ownershipSContract.newOwnerClaimOwnership(claimData.ownershipCode);
+      const receipt = await tx.wait();
+      
+      const eventData = getEvents(ownershipSContract, receipt, 'OwnershipClaimed');
+      toast.success('Ownership claimed with code successfully!');
+      
+      setClaimData({ ownershipCode: '' });
+    } catch (error: any) {
+      toast.error(`Claim failed: ${parseError(error)}`);
+    }
+  };
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: User },
+    { id: 'register', label: 'Register', icon: Plus },
+    { id: 'verify', label: 'Verify Product', icon: Shield },
+    { id: 'claim', label: 'Claim Ownership', icon: Key },
+    { id: 'transfer', label: 'Transfer Ownership', icon: ArrowRightLeft },
+    { id: 'my-items', label: 'My Items', icon: Package }
+  ];
+
+  if (!account) {
+    return (
+      <div className="pt-16 min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <User className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              User Dashboard
+            </h2>
+            <p className="text-gray-600 mb-8">
+              Connect your wallet to access user features
+            </p>
+            <button
+              onClick={connectWallet}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+            >
+              Connect Wallet
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-16 min-h-screen bg-gradient-to-br from-blue-50 to-orange-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <User className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">User Dashboard</h1>
+                <p className="text-gray-600">
+                  {registeredName ? `Welcome, ${registeredName}` : `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                isRegistered 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {isRegistered ? 'Registered' : 'Not Registered'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <nav className="space-y-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-300 ${
+                      activeTab === tab.id
+                        ? 'bg-blue-100 text-blue-700 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+                    }`}
+                  >
+                    <tab.icon className="h-5 w-5" />
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              {/* Overview Tab */}
+              {activeTab === 'overview' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Overview</h2>
+                  <div className="grid md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                      <Package className="h-8 w-8 mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Owned Items</h3>
+                      <p className="text-3xl font-bold">{myItems.length}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white">
+                      <Shield className="h-8 w-8 mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Verified Products</h3>
+                      <p className="text-3xl font-bold">0</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+                      <ArrowRightLeft className="h-8 w-8 mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Transfers</h3>
+                      <p className="text-3xl font-bold">0</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <button
+                        onClick={() => setActiveTab('verify')}
+                        className="flex items-center space-x-3 p-4 rounded-lg border-2 border-dashed border-blue-300 text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300"
+                      >
+                        <Scan className="h-5 w-5" />
+                        <span>Verify Product</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('claim')}
+                        className="flex items-center space-x-3 p-4 rounded-lg border-2 border-dashed border-emerald-300 text-emerald-600 hover:border-emerald-400 hover:bg-emerald-50 transition-all duration-300"
+                      >
+                        <Key className="h-5 w-5" />
+                        <span>Claim Ownership</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Register Tab */}
+              {activeTab === 'register' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Register as User</h2>
+                  {!isRegistered ? (
+                    <form onSubmit={registerUser} className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Username
+                        </label>
+                        <input
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                          placeholder="Enter your username (min 3 characters)"
+                          minLength={3}
+                          required
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+                      >
+                        Register User
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="text-center py-12">
+                      <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Already Registered</h3>
+                      <p className="text-gray-600">You are successfully registered as a user.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Verify Product Tab */}
+              {activeTab === 'verify' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Verify Product Authenticity</h2>
+                  <form onSubmit={verifyProductAuthenticity} className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Product Name
+                        </label>
+                        <input
+                          type="text"
+                          value={verificationData.name}
+                          onChange={(e) => setVerificationData({...verificationData, name: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                          placeholder="e.g., iPhone 15 Pro"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Unique ID
+                        </label>
+                        <input
+                          type="text"
+                          value={verificationData.uniqueId}
+                          onChange={(e) => setVerificationData({...verificationData, uniqueId: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                          placeholder="Product unique identifier"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Serial Number
+                        </label>
+                        <input
+                          type="text"
+                          value={verificationData.serial}
+                          onChange={(e) => setVerificationData({...verificationData, serial: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                          placeholder="Product serial number"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date (Unix timestamp)
+                        </label>
+                        <input
+                          type="number"
+                          value={verificationData.date}
+                          onChange={(e) => setVerificationData({...verificationData, date: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                          placeholder="Manufacturing date"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Owner Address
+                      </label>
+                      <input
+                        type="text"
+                        value={verificationData.owner}
+                        onChange={(e) => setVerificationData({...verificationData, owner: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                        placeholder="Product owner address"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Metadata (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={verificationData.metadata}
+                        onChange={(e) => setVerificationData({...verificationData, metadata: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                        placeholder="e.g., Black, 128GB, Pro Model"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Signature
+                      </label>
+                      <textarea
+                        value={verificationData.signature}
+                        onChange={(e) => setVerificationData({...verificationData, signature: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                        placeholder="Product signature from manufacturer"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                      Verify Product Authenticity
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* Claim Ownership Tab */}
+              {activeTab === 'claim' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Claim Product Ownership</h2>
+                  
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Method 1: Claim with Product Details</h3>
+                    <form onSubmit={claimOwnership} className="space-y-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Product Name
+                          </label>
+                          <input
+                            type="text"
+                            value={verificationData.name}
+                            onChange={(e) => setVerificationData({...verificationData, name: e.target.value})}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-300"
+                            placeholder="e.g., iPhone 15 Pro"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Unique ID
+                          </label>
+                          <input
+                            type="text"
+                            value={verificationData.uniqueId}
+                            onChange={(e) => setVerificationData({...verificationData, uniqueId: e.target.value})}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-300"
+                            placeholder="Product unique identifier"
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Signature
+                        </label>
+                        <textarea
+                          value={verificationData.signature}
+                          onChange={(e) => setVerificationData({...verificationData, signature: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-300"
+                          placeholder="Product signature from manufacturer"
+                          rows={3}
+                          required
+                        />
+                      </div>
+                      
+                      <button
+                        type="submit"
+                        className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-emerald-700 hover:to-emerald-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+                      >
+                        Claim Ownership
+                      </button>
+                    </form>
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Method 2: Claim with Ownership Code</h3>
+                    <form onSubmit={claimWithCode} className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Ownership Code
+                        </label>
+                        <input
+                          type="text"
+                          value={claimData.ownershipCode}
+                          onChange={(e) => setClaimData({...claimData, ownershipCode: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-300"
+                          placeholder="Enter ownership transfer code"
+                          required
+                        />
+                      </div>
+                      
+                      <button
+                        type="submit"
+                        className="w-full bg-gradient-to-r from-orange-600 to-orange-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-orange-700 hover:to-orange-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+                      >
+                        Claim with Code
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Transfer Ownership Tab */}
+              {activeTab === 'transfer' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Transfer Ownership</h2>
+                  <form onSubmit={generateTransferCode} className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Item ID
+                      </label>
+                      <input
+                        type="text"
+                        value={transferData.itemId}
+                        onChange={(e) => setTransferData({...transferData, itemId: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-300"
+                        placeholder="Enter item ID to transfer"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        New Owner Address
+                      </label>
+                      <input
+                        type="text"
+                        value={transferData.tempOwnerAddress}
+                        onChange={(e) => setTransferData({...transferData, tempOwnerAddress: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-300"
+                        placeholder="Enter new owner's wallet address"
+                        required
+                      />
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                      Generate Transfer Code
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* My Items Tab */}
+              {activeTab === 'my-items' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">My Items</h2>
+                  <div className="text-center py-12">
+                    <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Items Found</h3>
+                    <p className="text-gray-600 mb-6">
+                      You don't own any verified items yet. Start by claiming ownership of a product.
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('claim')}
+                      className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Claim Your First Item</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default UserDashboard;
