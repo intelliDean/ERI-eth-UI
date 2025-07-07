@@ -26,6 +26,7 @@ export const parseError = (error: any): string => {
     "item_not_claimed_yet": "Item not claimed yet",
     "unauthorized": "Unauthorized operation",
     "only_owner": "Only owner can perform this action",
+    "noitemsfound": "No items found",
 
     // Common Ethereum errors
     "user rejected transaction": "Transaction was canceled by user",

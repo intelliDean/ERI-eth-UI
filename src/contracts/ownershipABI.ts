@@ -27,6 +27,11 @@ export const OWNERSHIP_ABI = [
         "type": "error"
     },
     {
+        "inputs": [],
+        "name": "NoItemsFound",
+        "type": "error"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
