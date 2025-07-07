@@ -6,6 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import LandingPage from './pages/LandingPage';
 import ManufacturerDashboard from './pages/ManufacturerDashboard';
 import UserDashboard from './pages/UserDashboard';
+import VerifyPage from './pages/VerifyPage';
 import Navigation from './components/Navigation';
 import { WalletProvider } from './contexts/WalletContext';
 
@@ -19,6 +20,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/manufacturer" element={<ManufacturerDashboard />} />
             <Route path="/user" element={<UserDashboard />} />
+            <Route path="/verify" element={<VerifyPage />} />
           </Routes>
           <ToastContainer
             position="top-right"

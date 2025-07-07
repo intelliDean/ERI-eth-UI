@@ -100,7 +100,14 @@ const ManufacturerDashboard = () => {
       }
       
       const qrData = JSON.stringify({ cert, signature });
-      setQrCodeData(qrData);
+      
+      // Create URL with certificate data for QR code
+      const baseUrl = window.location.origin;
+      const certParam = encodeURIComponent(JSON.stringify(cert));
+      const sigParam = encodeURIComponent(signature);
+      const verifyUrl = `${baseUrl}/verify?cert=${certParam}&sig=${sigParam}`;
+      
+      setQrCodeData(verifyUrl);
       
       toast.success('Certificate created and signed successfully!');
       
@@ -370,26 +377,57 @@ const ManufacturerDashboard = () => {
 
                   {/* QR Code Display */}
                   {qrCodeData && (
-                    <div className="mt-8 p-6 bg-gray-50 rounded-xl">
+                    <div className="mt-8 p-6 bg-gradient-to-br from-blue-50 to-emerald-50 rounded-xl border border-blue-200">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-                        Certificate QR Code
+                        Product Verification QR Code
                       </h3>
+                      <p className="text-sm text-gray-600 text-center mb-6">
+                        Scan this QR code to verify authenticity, claim ownership, or check ownership status
+                      </p>
                       <div className="flex justify-center mb-4">
                         <QRCodeCanvas
                           id="qr-code"
                           value={qrCodeData}
-                          size={200}
-                          className="border border-gray-200 rounded-lg"
+                          size={256}
+                          className="border-4 border-white rounded-xl shadow-lg"
+                          level="M"
+                          includeMargin={true}
                         />
                       </div>
-                      <div className="text-center">
+                      <div className="text-center space-y-3">
+                        <p className="text-xs text-gray-500 max-w-md mx-auto">
+                          This QR code contains the product certificate and verification URL. 
+                          Users can scan it to instantly verify and claim the product.
+                        </p>
                         <button
                           onClick={downloadQRCode}
-                          className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                          className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl"
                         >
                           <Download className="h-4 w-4" />
                           <span>Download QR Code</span>
                         </button>
+                      </div>
+                      
+                      {/* URL Display */}
+                      <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Verification URL:</p>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={qrCodeData}
+                            readOnly
+                            className="flex-1 text-xs font-mono bg-gray-50 px-3 py-2 rounded border text-gray-600"
+                          />
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(qrCodeData);
+                              toast.success('URL copied to clipboard!');
+                            }}
+                            className="px-3 py-2 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors duration-300 text-sm"
+                          >
+                            Copy
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
