@@ -25,6 +25,7 @@ const VerifyPage = () => {
     account,
     authenticityRContract,
     ownershipRContract,
+    authenticitySContract,
     connectWallet
   } = useWallet();
   
@@ -138,8 +139,6 @@ const VerifyPage = () => {
 
     try {
       setIsLoading(true);
-      const { authenticitySContract } = useWallet();
-      
       if (!authenticitySContract) {
         toast.error('Please connect your wallet');
         return;
