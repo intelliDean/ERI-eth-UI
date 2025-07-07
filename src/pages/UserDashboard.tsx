@@ -271,16 +271,17 @@ const UserDashboard = () => {
 
   if (!account) {
     return (
-      <div className="pt-16 min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4">
+      <div className="pt-16 min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full mx-4 transition-colors duration-300">
           <div className="text-center">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <User className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               User Dashboard
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-600 dark:text-gray-300 mb-8">
               Connect your wallet to access user features
             </p>
             <button
@@ -296,27 +297,31 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="pt-16 min-h-screen bg-gradient-to-br from-blue-50 to-orange-50">
+    <div className="pt-16 min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 transition-colors duration-300">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
                 <User className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">User Dashboard</h1>
-                <p className="text-gray-600">
-                  {userRegisteredName ? `Welcome, ${userRegisteredName}` : `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`}
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Dashboard</h1>
+                <p className="text-gray-600 dark:text-gray-300">
+                  {userRegisteredName ? (
+                    <span>Welcome back, <span className="font-semibold text-blue-600 dark:text-blue-400">{userRegisteredName}</span>!</span>
+                  ) : (
+                    `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`
+                  )}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                 isUserRegistered 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-yellow-100 text-yellow-700'
+                  ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' 
+                  : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300'
               }`}>
                 {isUserRegistered ? 'Registered' : 'Not Registered'}
               </div>
@@ -327,7 +332,7 @@ const UserDashboard = () => {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transition-colors duration-300">
               <nav className="space-y-2">
                 {tabs.map((tab) => (
                   <button
@@ -335,8 +340,8 @@ const UserDashboard = () => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-300 ${
                       activeTab === tab.id
-                        ? 'bg-blue-100 text-blue-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-medium'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400'
                     }`}
                   >
                     <tab.icon className="h-5 w-5" />
@@ -349,11 +354,11 @@ const UserDashboard = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 transition-colors duration-300">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Overview</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Overview</h2>
                   <div className="grid md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
                       <Package className="h-8 w-8 mb-4" />
@@ -374,19 +379,19 @@ const UserDashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 transition-colors duration-300">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <button
                         onClick={() => setActiveTab('verify')}
-                        className="flex items-center space-x-3 p-4 rounded-lg border-2 border-dashed border-blue-300 text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300"
+                        className="flex items-center space-x-3 p-4 rounded-lg border-2 border-dashed border-blue-300 dark:border-blue-600 text-blue-600 dark:text-blue-400 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-300"
                       >
                         <Scan className="h-5 w-5" />
                         <span>Verify Product</span>
                       </button>
                       <button
                         onClick={() => setActiveTab('claim')}
-                        className="flex items-center space-x-3 p-4 rounded-lg border-2 border-dashed border-emerald-300 text-emerald-600 hover:border-emerald-400 hover:bg-emerald-50 transition-all duration-300"
+                        className="flex items-center space-x-3 p-4 rounded-lg border-2 border-dashed border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-all duration-300"
                       >
                         <Key className="h-5 w-5" />
                         <span>Claim Ownership</span>
@@ -399,18 +404,18 @@ const UserDashboard = () => {
               {/* Register Tab */}
               {activeTab === 'register' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Register as User</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Register as User</h2>
                   {!isUserRegistered ? (
                     <form onSubmit={registerUser} className="space-y-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Username
                         </label>
                         <input
                           type="text"
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
                           placeholder="Enter your username (min 3 characters)"
                           minLength={3}
                           required
@@ -426,8 +431,8 @@ const UserDashboard = () => {
                   ) : (
                     <div className="text-center py-12">
                       <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Already Registered</h3>
-                      <p className="text-gray-600">You are successfully registered as a user.</p>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Already Registered</h3>
+                      <p className="text-gray-600 dark:text-gray-300">You are successfully registered as a user.</p>
                     </div>
                   )}
                 </div>
@@ -639,31 +644,44 @@ const UserDashboard = () => {
               {/* Transfer Ownership Tab */}
               {activeTab === 'transfer' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Transfer Ownership</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Transfer Ownership</h2>
                   <form onSubmit={generateTransferCode} className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Item ID
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Select Item to Transfer
                       </label>
-                      <input
-                        type="text"
-                        value={transferData.itemId}
-                        onChange={(e) => setTransferData({...transferData, itemId: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-300"
-                        placeholder="Enter item ID to transfer"
-                        required
-                      />
+                      {myItems.length > 0 ? (
+                        <select
+                          value={transferData.itemId}
+                          onChange={(e) => setTransferData({...transferData, itemId: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-300"
+                          required
+                        >
+                          <option value="">Select an item to transfer</option>
+                          {myItems.map((item, index) => (
+                            <option key={index} value={item.itemId}>
+                              {item.name} - {item.itemId}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg bg-gray-50 dark:bg-gray-600">
+                          <p className="text-gray-500 dark:text-gray-400 text-center">
+                            No items available for transfer. Claim ownership of a product first.
+                          </p>
+                        </div>
+                      )}
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         New Owner Address
                       </label>
                       <input
                         type="text"
-                        value={transferData.tempOwnerAddress}
+                        value={transferData.itemId}
                         onChange={(e) => setTransferData({...transferData, tempOwnerAddress: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-300"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-300"
                         placeholder="Enter new owner's wallet address"
                         required
                       />
@@ -671,7 +689,9 @@ const UserDashboard = () => {
                     
                     <button
                       type="submit"
+                      disabled={myItems.length === 0}
                       className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+                      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Generate Transfer Code
                     </button>
@@ -682,18 +702,18 @@ const UserDashboard = () => {
               {/* My Items Tab */}
               {activeTab === 'my-items' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">My Items</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">My Items</h2>
                   
                   {isLoadingItems ? (
                     <div className="text-center py-12">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-gray-600">Loading your items...</p>
+                      <p className="text-gray-600 dark:text-gray-300">Loading your items...</p>
                     </div>
                   ) : myItems.length === 0 ? (
                     <div className="text-center py-12">
                       <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Items Found</h3>
-                      <p className="text-gray-600 mb-6">
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Items Found</h3>
+                      <p className="text-gray-600 dark:text-gray-300 mb-6">
                         You don't own any verified items yet. Start by claiming ownership of a product.
                       </p>
                       <button
@@ -707,12 +727,12 @@ const UserDashboard = () => {
                   ) : (
                     <div className="space-y-6">
                       <div className="flex items-center justify-between">
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 dark:text-gray-300">
                           You own {myItems.length} verified item{myItems.length !== 1 ? 's' : ''}
                         </p>
                         <button
                           onClick={loadMyItems}
-                          className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors duration-300"
+                          className="inline-flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300"
                         >
                           <Search className="h-4 w-4" />
                           <span>Refresh</span>
@@ -721,18 +741,18 @@ const UserDashboard = () => {
                       
                       <div className="grid gap-6">
                         {myItems.map((item, index) => (
-                          <div key={index} className="bg-gray-50 rounded-xl p-6 border border-gray-200 hover:border-blue-300 transition-colors duration-300">
+                          <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 transition-colors duration-300">
                             <div className="flex items-start justify-between mb-4">
                               <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                                   {item.name}
                                 </h3>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                   by {item.manufacturer}
                                 </p>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                <div className="px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
                                   Verified
                                 </div>
                               </div>
@@ -740,14 +760,14 @@ const UserDashboard = () => {
                             
                             <div className="grid md:grid-cols-2 gap-4 mb-4">
                               <div>
-                                <p className="text-sm font-medium text-gray-700 mb-1">Item ID</p>
-                                <p className="text-sm text-gray-600 font-mono bg-white px-3 py-2 rounded border">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Item ID</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300 font-mono bg-white dark:bg-gray-600 px-3 py-2 rounded border dark:border-gray-500">
                                   {item.itemId}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-700 mb-1">Serial Number</p>
-                                <p className="text-sm text-gray-600 font-mono bg-white px-3 py-2 rounded border">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Serial Number</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300 font-mono bg-white dark:bg-gray-600 px-3 py-2 rounded border dark:border-gray-500">
                                   {item.serial}
                                 </p>
                               </div>
@@ -755,14 +775,14 @@ const UserDashboard = () => {
                             
                             <div className="grid md:grid-cols-2 gap-4 mb-4">
                               <div>
-                                <p className="text-sm font-medium text-gray-700 mb-1">Manufacturing Date</p>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Manufacturing Date</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">
                                   {new Date(Number(item.date) * 1000).toLocaleDateString()}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-700 mb-1">Owner Address</p>
-                                <p className="text-sm text-gray-600 font-mono">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Address</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300 font-mono">
                                   {item.owner.slice(0, 6)}...{item.owner.slice(-4)}
                                 </p>
                               </div>
@@ -770,12 +790,12 @@ const UserDashboard = () => {
                             
                             {item.metadata && item.metadata.length > 0 && (
                               <div className="mb-4">
-                                <p className="text-sm font-medium text-gray-700 mb-2">Product Details</p>
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Product Details</p>
                                 <div className="flex flex-wrap gap-2">
                                   {item.metadata.map((meta: string, metaIndex: number) => (
                                     <span
                                       key={metaIndex}
-                                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                                      className="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-sm"
                                     >
                                       {meta}
                                     </span>
@@ -784,7 +804,7 @@ const UserDashboard = () => {
                               </div>
                             )}
                             
-                            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
                               <div className="flex items-center space-x-2 text-green-600">
                                 <CheckCircle className="h-4 w-4" />
                                 <span className="text-sm font-medium">Authenticity Verified</span>
@@ -794,7 +814,7 @@ const UserDashboard = () => {
                                   setTransferData({...transferData, itemId: item.itemId});
                                   setActiveTab('transfer');
                                 }}
-                                className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors duration-300"
+                                className="inline-flex items-center space-x-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-300"
                               >
                                 <ArrowRightLeft className="h-4 w-4" />
                                 <span className="text-sm font-medium">Transfer</span>
