@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Shield, User, Factory, Menu, X, Moon, Sun } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
 import { useTheme } from '../contexts/ThemeContext';
+import NotificationCenter from './NotificationCenter';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -71,6 +72,7 @@ const Navigation = () => {
             >
               {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
+            <NotificationCenter />
             <button
               onClick={connectWallet}
               className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
@@ -143,6 +145,9 @@ const Navigation = () => {
                 {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
               </button>
+              <div className="px-4 py-3">
+                <NotificationCenter />
+              </div>
               <button
                 onClick={() => {
                   connectWallet();
