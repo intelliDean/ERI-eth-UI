@@ -38,30 +38,48 @@ const VerifyPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeAction, setActiveAction] = useState<'verify' | 'claim' | 'ownership'>('verify');
 
+  // Add debug logging
   useEffect(() => {
     const certData = searchParams.get('cert');
     const sigData = searchParams.get('sig');
+    
+    console.log('URL params:', { certData, sigData });
+    console.log('Full URL:', window.location.href);
     
     if (certData && sigData) {
       try {
         const decodedCert = JSON.parse(decodeURIComponent(certData));
         const decodedSig = decodeURIComponent(sigData);
         
+        console.log('Decoded certificate:', decodedCert);
+        console.log('Decoded signature:', decodedSig);
+        
         setCertificate(decodedCert);
         setSignature(decodedSig);
         
         // Auto-verify on load
-        verifyAuthenticity(decodedCert, decodedSig);
+        if (authenticityRContract) {
+          verifyAuthenticity(decodedCert, decodedSig);
+        }
       } catch (error) {
         toast.error('Invalid QR code data');
         console.error('Error parsing QR data:', error);
       }
     } else {
-      toast.error('No certificate data found in QR code');
+      console.log('Missing URL parameters');
+      if (!certData) console.log('Missing cert parameter');
+      if (!sigData) console.log('Missing sig parameter');
     }
     
     setIsLoading(false);
-  }, [searchParams, authenticityRContract]);
+  }, [searchParams]);
+
+  // Separate effect for auto-verification when contract is ready
+  useEffect(() => {
+    if (certificate && signature && authenticityRContract && !verificationResult) {
+      verifyAuthenticity(certificate, signature);
+    }
+  }, [certificate, signature, authenticityRContract]);
 
   const verifyAuthenticity = async (cert?: any, sig?: string) => {
     const targetCert = cert || certificate;

@@ -105,9 +105,14 @@ const ManufacturerDashboard = () => {
       // Automatically detect the correct base URL
       // This will work for both development and production (Vercel)
       const baseUrl = window.location.origin;
-      const certParam = encodeURIComponent(JSON.stringify(cert));
-      const sigParam = encodeURIComponent(signature);
-      const verifyUrl = `${baseUrl}/verify?cert=${certParam}&sig=${sigParam}`;
+      
+      // Use a more robust URL encoding approach
+      const params = new URLSearchParams();
+      params.set('cert', JSON.stringify(cert));
+      params.set('sig', signature);
+      const verifyUrl = `${baseUrl}/verify?${params.toString()}`;
+      
+      console.log('Generated QR URL:', verifyUrl);
       
       setQrCodeData(verifyUrl);
       
