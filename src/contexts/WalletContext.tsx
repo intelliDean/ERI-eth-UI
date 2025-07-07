@@ -101,7 +101,9 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const initializeProvider = async () => {
     if (typeof window.ethereum !== "undefined") {
-      const web3Provider = new ethers.BrowserProvider(window.ethereum);
+      const web3Provider = new ethers.BrowserProvider(window.ethereum, {
+        ensAddress: null
+      });
       setProvider(web3Provider);
       
       // Initialize read-only contracts
