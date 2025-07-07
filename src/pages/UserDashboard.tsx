@@ -34,6 +34,7 @@ const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [username, setUsername] = useState('');
   const [myItems, setMyItems] = useState<any[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
 
   const [verificationData, setVerificationData] = useState({
     name: '',
@@ -53,6 +54,32 @@ const UserDashboard = () => {
   const [claimData, setClaimData] = useState({
     ownershipCode: ''
   });
+
+  // Load user's items when component mounts or account changes
+  useEffect(() => {
+    if (account && ownershipRContract) {
+      loadMyItems();
+    }
+  }, [account, ownershipRContract]);
+
+  const loadMyItems = async () => {
+    if (!ownershipRContract || !account) return;
+    
+    try {
+      setIsLoadingItems(true);
+      const items = await ownershipRContract.getAllMyItems();
+      setMyItems(items);
+      console.log('Loaded items:', items);
+    } catch (error: any) {
+      console.error('Error loading items:', error);
+      // Don't show error toast for empty items, it's normal for new users
+      if (!error.message.includes('No items found')) {
+        toast.error(`Failed to load items: ${parseError(error)}`);
+      }
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
 
   const registerUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +184,8 @@ const UserDashboard = () => {
       await tx.wait();
       
       toast.success('Ownership claimed successfully!');
+      // Reload items after claiming ownership
+      await loadMyItems();
       setVerificationData({
         name: '',
         uniqueId: '',
@@ -222,6 +251,8 @@ const UserDashboard = () => {
       
       const eventData = getEvents(ownershipSContract, receipt, 'OwnershipClaimed');
       toast.success('Ownership claimed with code successfully!');
+      // Reload items after claiming ownership
+      await loadMyItems();
       
       setClaimData({ ownershipCode: '' });
     } catch (error: any) {
@@ -327,7 +358,9 @@ const UserDashboard = () => {
                     <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
                       <Package className="h-8 w-8 mb-4" />
                       <h3 className="text-lg font-semibold mb-2">Owned Items</h3>
-                      <p className="text-3xl font-bold">{myItems.length}</p>
+                      <p className="text-3xl font-bold">
+                        {isLoadingItems ? '...' : myItems.length}
+                      </p>
                     </div>
                     <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white">
                       <Shield className="h-8 w-8 mb-4" />
@@ -650,19 +683,128 @@ const UserDashboard = () => {
               {activeTab === 'my-items' && (
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">My Items</h2>
-                  <div className="text-center py-12">
-                    <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Items Found</h3>
-                    <p className="text-gray-600 mb-6">
-                      You don't own any verified items yet. Start by claiming ownership of a product.
-                    </p>
-                    <button
-                      onClick={() => setActiveTab('claim')}
-                      className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Claim Your First Item</span>
-                    </button>
+                  
+                  {isLoadingItems ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading your items...</p>
+                    </div>
+                  ) : myItems.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Items Found</h3>
+                      <p className="text-gray-600 mb-6">
+                        You don't own any verified items yet. Start by claiming ownership of a product.
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('claim')}
+                        className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Claim Your First Item</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <p className="text-gray-600">
+                          You own {myItems.length} verified item{myItems.length !== 1 ? 's' : ''}
+                        </p>
+                        <button
+                          onClick={loadMyItems}
+                          className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors duration-300"
+                        >
+                          <Search className="h-4 w-4" />
+                          <span>Refresh</span>
+                        </button>
+                      </div>
+                      
+                      <div className="grid gap-6">
+                        {myItems.map((item, index) => (
+                          <div key={index} className="bg-gray-50 rounded-xl p-6 border border-gray-200 hover:border-blue-300 transition-colors duration-300">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                                  {item.name}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  by {item.manufacturer}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                  Verified
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="grid md:grid-cols-2 gap-4 mb-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 mb-1">Item ID</p>
+                                <p className="text-sm text-gray-600 font-mono bg-white px-3 py-2 rounded border">
+                                  {item.itemId}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 mb-1">Serial Number</p>
+                                <p className="text-sm text-gray-600 font-mono bg-white px-3 py-2 rounded border">
+                                  {item.serial}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid md:grid-cols-2 gap-4 mb-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 mb-1">Manufacturing Date</p>
+                                <p className="text-sm text-gray-600">
+                                  {new Date(Number(item.date) * 1000).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 mb-1">Owner Address</p>
+                                <p className="text-sm text-gray-600 font-mono">
+                                  {item.owner.slice(0, 6)}...{item.owner.slice(-4)}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {item.metadata && item.metadata.length > 0 && (
+                              <div className="mb-4">
+                                <p className="text-sm font-medium text-gray-700 mb-2">Product Details</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {item.metadata.map((meta: string, metaIndex: number) => (
+                                    <span
+                                      key={metaIndex}
+                                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                                    >
+                                      {meta}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                              <div className="flex items-center space-x-2 text-green-600">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="text-sm font-medium">Authenticity Verified</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setTransferData({...transferData, itemId: item.itemId});
+                                  setActiveTab('transfer');
+                                }}
+                                className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors duration-300"
+                              >
+                                <ArrowRightLeft className="h-4 w-4" />
+                                <span className="text-sm font-medium">Transfer</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </div>
               )}
