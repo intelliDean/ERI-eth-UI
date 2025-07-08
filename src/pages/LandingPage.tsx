@@ -120,8 +120,8 @@ const LandingPage = () => {
               Why Choose ERI?
             </h2>
             <p className="text-xl text-gray-600 dark:text-slate-300 max-w-3xl mx-auto transition-colors duration-300">
-              Built with cutting-edge blockchain technology to provide unmatched 
-              security and transparency for product authentication and ownership.
+              Engineered with advanced blockchain technology, delivering unparalleled security, transparency, and trust 
+              for verifying product authenticity and establishing provable ownership.
             </p>
           </div>
 
