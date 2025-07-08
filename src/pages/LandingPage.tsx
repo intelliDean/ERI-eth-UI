@@ -252,7 +252,7 @@ const LandingPage = () => {
               <span className="text-xl font-bold">ERI</span>
             </div>
             <p className="text-gray-400 dark:text-slate-400 text-center md:text-right transition-colors duration-300">
-              © 2025 ERI. Securing authenticity with blockchain technology.
+             <span className="text-xl font-bold">ERI</span>  © 2025 ERI. Securing authenticity with blockchain technology.
             </p>
           </div>
         </div>
