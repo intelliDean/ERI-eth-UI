@@ -264,19 +264,29 @@ const UserDashboard = () => {
       // Find the item details
       const item = myItems.find(item => item.itemId === transferData.itemId);
       
-      // Save transfer code to Supabase
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
-      
-      await saveTransferCode({
-        item_id: transferData.itemId,
-        item_name: item?.name || 'Unknown Item',
-        from_address: account.toLowerCase(),
-        to_address: transferData.tempOwnerAddress.toLowerCase(),
-        ownership_code: ownershipCode,
-        is_active: true,
-        expires_at: expiresAt.toISOString()
-      });
+      // Save transfer code to Supabase (with duplicate handling)
+      try {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+        
+        await saveTransferCode({
+          item_id: transferData.itemId,
+          item_name: item?.name || 'Unknown Item',
+          from_address: account.toLowerCase(),
+          to_address: transferData.tempOwnerAddress.toLowerCase(),
+          ownership_code: ownershipCode,
+          is_active: true,
+          expires_at: expiresAt.toISOString()
+        });
+      } catch (dbError: any) {
+        // If it's a duplicate key error, it means the code already exists
+        // This can happen if the same transfer is attempted multiple times
+        if (dbError.message?.includes('duplicate key') || dbError.code === '23505') {
+          console.log('Transfer code already exists in database, continuing...');
+        } else {
+          throw dbError; // Re-throw if it's a different error
+        }
+      }
       
       // Create notifications
       await Promise.all([
@@ -316,7 +326,12 @@ const UserDashboard = () => {
         tempOwnerAddress: ''
       });
     } catch (error: any) {
-      toast.error(`Transfer code generation failed: ${parseError(error)}`);
+      // Handle specific blockchain errors
+      if (error.message?.includes('already generated') || error.message?.includes('code exists')) {
+        toast.error('A transfer code for this item and recipient already exists. Please revoke the existing code first or use a different recipient.');
+      } else {
+        toast.error(`Transfer code generation failed: ${parseError(error)}`);
+      }
     }
   };
 
@@ -424,6 +439,7 @@ const UserDashboard = () => {
     { id: 'verify', label: 'Verify Product', icon: Shield },
     { id: 'claim', label: 'Claim Ownership', icon: Key },
     { id: 'transfer', label: 'Transfer Ownership', icon: ArrowRightLeft },
+    { id: 'revoke', label: 'Revoke Transfer', icon: X },
     { id: 'my-items', label: 'My Items', icon: Package }
   ];
 
@@ -800,6 +816,18 @@ const UserDashboard = () => {
               {activeTab === 'transfer' && (
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Transfer Ownership</h2>
+                  <div className="bg-blue-50 dark:bg-slate-700/30 border border-blue-200 dark:border-slate-600 rounded-xl p-4 mb-6">
+                    <div className="flex items-start space-x-3">
+                      <ArrowRightLeft className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-1">Transfer Process</h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-400">
+                          Generate a transfer code to securely transfer ownership to another user. 
+                          The recipient will receive a notification and can claim ownership using the code.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                   <form onSubmit={generateTransferCode} className="space-y-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -850,6 +878,90 @@ const UserDashboard = () => {
                       Generate Transfer Code
                     </button>
                   </form>
+                </div>
+              )}
+
+              {/* Revoke Transfer Tab */}
+              {activeTab === 'revoke' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Revoke Transfer Codes</h2>
+                  <div className="bg-red-50 dark:bg-slate-700/30 border border-red-200 dark:border-slate-600 rounded-xl p-4 mb-6">
+                    <div className="flex items-start space-x-3">
+                      <X className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-red-900 dark:text-red-300 mb-1">Revoke Transfer Codes</h4>
+                        <p className="text-sm text-red-700 dark:text-red-400">
+                          Manage and revoke active transfer codes. Once revoked, the recipient will no longer be able to claim ownership.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Active Transfer Codes */}
+                  {activeTransferCodes.length > 0 ? (
+                    <div className="space-y-4">
+                      {activeTransferCodes.map((transferCode) => (
+                        <div key={transferCode.id} className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl p-6 transition-colors duration-300">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{transferCode.item_name}</h4>
+                              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p className="text-gray-600 dark:text-slate-300 mb-1">
+                                    <span className="font-medium">Item ID:</span> {transferCode.item_id}
+                                  </p>
+                                  <p className="text-gray-600 dark:text-slate-300">
+                                    <span className="font-medium">Recipient:</span> {transferCode.to_address.slice(0, 6)}...{transferCode.to_address.slice(-4)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600 dark:text-slate-300 mb-1">
+                                    <span className="font-medium">Created:</span> {new Date(transferCode.created_at).toLocaleDateString()}
+                                  </p>
+                                  <p className="text-gray-600 dark:text-slate-300">
+                                    <span className="font-medium">Expires:</span> {new Date(transferCode.expires_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 mb-3">
+                                Active
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-600">
+                            <div className="text-xs text-gray-500 dark:text-slate-400">
+                              Transfer code: {transferCode.ownership_code.slice(0, 10)}...{transferCode.ownership_code.slice(-6)}
+                            </div>
+                            <button
+                              onClick={() => handleRevokeTransferCode(transferCode)}
+                              className="inline-flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-300 text-sm font-medium"
+                            >
+                              <X className="h-4 w-4" />
+                              <span>Revoke Code</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Key className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Active Transfer Codes</h3>
+                      <p className="text-gray-600 dark:text-slate-300 mb-6">
+                        You don't have any active transfer codes to revoke.
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('transfer')}
+                        className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                      >
+                        <ArrowRightLeft className="h-4 w-4" />
+                        <span>Create Transfer Code</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

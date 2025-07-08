@@ -84,6 +84,35 @@ export const markAllNotificationsAsRead = async (userAddress: string) => {
 
 // Transfer code functions
 export const saveTransferCode = async (transferCode: Omit<TransferCodeData, 'id' | 'created_at'>) => {
+  // First check if a transfer code already exists for this combination
+  const { data: existing } = await supabase
+    .from('transfer_codes')
+    .select('*')
+    .eq('ownership_code', transferCode.ownership_code)
+    .single();
+
+  if (existing) {
+    // If code exists and is active, return the existing one
+    if (existing.is_active) {
+      return existing;
+    } else {
+      // If code exists but is inactive, reactivate it
+      const { data, error } = await supabase
+        .from('transfer_codes')
+        .update({ 
+          is_active: true,
+          expires_at: transferCode.expires_at 
+        })
+        .eq('ownership_code', transferCode.ownership_code)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  }
+
+  // If no existing code, create a new one
   const { data, error } = await supabase
     .from('transfer_codes')
     .insert([transferCode])
