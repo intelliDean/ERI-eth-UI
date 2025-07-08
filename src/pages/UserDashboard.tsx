@@ -12,7 +12,8 @@ import {
   Search,
   Download,
   Upload,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { parseError, signTypedData } from '../utils/blockchain';
 import { getEvents } from '../utils/getEvents';
