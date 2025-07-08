@@ -265,7 +265,7 @@ const VerifyPage = () => {
                         <h4 className={`text-lg font-semibold ${
                           verificationResult.isValid ? 'text-green-900' : 'text-red-900'
                         }`}>
-                          {verificationResult.isValid ? 'Product is Authentic' : 'Product Not Verified'}
+                          {verificationResult.isValid ? 'Product is Authentic' : 'Product Authenticity Failed!'}
                         </h4>
                         {verificationResult.isValid && verificationResult.manufacturerName && (
                           <p className="text-green-700">
