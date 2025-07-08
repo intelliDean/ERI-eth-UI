@@ -22,6 +22,7 @@ const ManufacturerDashboard = () => {
     signer,
     chainId,
     authenticitySContract,
+    authenticityRContract,
     isManufacturerRegistered,
     manufacturerRegisteredName,
     connectWallet,
@@ -95,7 +96,10 @@ const ManufacturerDashboard = () => {
       
       // Verify signature locally first
       const recoveredAddress = ethers.verifyTypedData(domain, types, value, signature);
-      if (recoveredAddress.toLowerCase() !== account?.toLowerCase()) {
+
+      const isValid = authenticityRContract.verifySignature(cert, signature);
+      
+      if (!isValid || recoveredAddress.toLowerCase() !== account?.toLowerCase()) {
         throw new Error('Signature verification failed');
       }
       
