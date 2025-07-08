@@ -84,8 +84,11 @@ const NotificationCenter = () => {
         // User B - navigate to claim page
         navigate('/user', { state: { activeTab: 'claim', ownershipCode: notification.ownership_code } });
       } else if (notification.type === 'transfer_code_generated' && notification.from_address?.toLowerCase() === account?.toLowerCase()) {
-        // User A - navigate to transfer management
-        navigate('/user', { state: { activeTab: 'transfer' } });
+        // User A - navigate to revoke page with ownership code
+        navigate('/user', { state: { activeTab: 'revoke', ownershipCode: notification.ownership_code } });
+      } else if (notification.type === 'transfer_code_revoked') {
+        // Navigate to user dashboard for revoked notifications
+        navigate('/user', { state: { activeTab: 'overview' } });
       }
 
       setIsOpen(false);
