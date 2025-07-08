@@ -16,7 +16,7 @@ function App() {
     <ThemeProvider>
       <WalletProvider>
         <Router>
-          <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
             <Navigation />
             <Routes>
               <Route path="/" element={<LandingPage />} />
@@ -34,7 +34,7 @@ function App() {
               pauseOnFocusLoss
               draggable
               pauseOnHover
-              theme="light"
+              theme="dark"
               className="mt-16"
             />
           </div>

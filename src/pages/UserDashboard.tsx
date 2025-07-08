@@ -453,10 +453,10 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="pt-16 min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+    <div className="pt-16 min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 transition-colors duration-300">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 mb-8 transition-colors duration-300">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
@@ -488,7 +488,7 @@ const UserDashboard = () => {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 transition-colors duration-300">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 transition-colors duration-300">
               <nav className="space-y-2">
                 {tabs.map((tab) => (
                   <button
@@ -510,7 +510,7 @@ const UserDashboard = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 transition-colors duration-300">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8 transition-colors duration-300">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <div>
@@ -533,7 +533,7 @@ const UserDashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 transition-colors duration-300">
+                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-6 transition-colors duration-300">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <button
@@ -849,36 +849,6 @@ const UserDashboard = () => {
                       Generate Transfer Code
                     </button>
                   </form>
-                  
-                  {/* Active Transfer Codes */}
-                  {activeTransferCodes.length > 0 && (
-                    <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-600">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Active Transfer Codes</h3>
-                      <div className="space-y-4">
-                        {activeTransferCodes.map((transferCode) => (
-                          <div key={transferCode.id} className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="font-medium text-gray-900 dark:text-white">{transferCode.item_name}</h4>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">
-                                  To: {transferCode.to_address.slice(0, 6)}...{transferCode.to_address.slice(-4)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  Created: {new Date(transferCode.created_at).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => handleRevokeTransferCode(transferCode)}
-                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-300 text-sm"
-                              >
-                                Revoke
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -905,7 +875,7 @@ const UserDashboard = () => {
                   ) : myItems.length > 0 ? (
                     <div className="grid gap-6">
                       {myItems.map((item, index) => (
-                        <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border border-gray-200 dark:border-gray-600 transition-colors duration-300">
+                        <div key={index} className="bg-gray-50 dark:bg-slate-700 rounded-xl p-6 border border-gray-200 dark:border-slate-600 transition-colors duration-300">
                           <div className="flex items-start justify-between mb-4">
                             <div>
                               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{item.name}</h3>
@@ -923,13 +893,13 @@ const UserDashboard = () => {
                           <div className="grid md:grid-cols-2 gap-4 mb-4">
                             <div>
                               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Item ID</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-white dark:bg-gray-600 px-3 py-2 rounded border">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-white dark:bg-slate-600 px-3 py-2 rounded border">
                                 {item.itemId}
                               </p>
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Serial Number</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-white dark:bg-gray-600 px-3 py-2 rounded border">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-white dark:bg-slate-600 px-3 py-2 rounded border">
                                 {item.serial}
                               </p>
                             </div>
@@ -951,7 +921,7 @@ const UserDashboard = () => {
                             </div>
                           )}
                           
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+                          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-600">
                             <div className="flex items-center space-x-2">
                               <CheckCircle className="h-5 w-5 text-green-500" />
                               <span className="text-sm font-medium text-green-700 dark:text-green-400">Verified & Owned</span>

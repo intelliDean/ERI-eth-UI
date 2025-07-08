@@ -80,7 +80,7 @@ export const signTypedData = (certificate: any, chainId: number) => {
     },
     primaryType: "Certificate",
     domain: {
-      name: import.meta.env.VITE_SIGNING_DOMAIN || "AuthentiChain",
+      name: import.meta.env.VITE_SIGNING_DOMAIN || "ERI",
       version: import.meta.env.VITE_SIGNATURE_VERSION || "1",
       chainId: Number(chainId),
       verifyingContract: import.meta.env.VITE_AUTHENTICITY || "",

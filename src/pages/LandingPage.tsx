@@ -215,7 +215,7 @@ const LandingPage = () => {
             Ready to Secure Your Products?
           </h2>
           <p className="text-xl text-blue-100 mb-10 max-w-3xl mx-auto">
-            Join thousands of manufacturers and users who trust AuthentiChain 
+            Join thousands of manufacturers and users who trust ERI 
             for product verification and ownership management.
           </p>
           
@@ -249,10 +249,10 @@ const LandingPage = () => {
               <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl">
                 <Shield className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold">AuthentiChain</span>
+              <span className="text-xl font-bold">ERI</span>
             </div>
             <p className="text-gray-400 text-center md:text-right">
-              © 2025 AuthentiChain. Securing authenticity with blockchain technology.
+              © 2025 ERI. Securing authenticity with blockchain technology.
             </p>
           </div>
         </div>

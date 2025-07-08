@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, X, Check, CheckCheck, Clock, Package, ArrowRightLeft, Key } from 'lucide-react';
+import { Bell, X, Check, CheckCheck, Clock, Package, ArrowRightLeft, Key, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useWallet } from '../contexts/WalletContext';
 import { 
@@ -121,13 +121,13 @@ const NotificationCenter = () => {
   const getNotificationColor = (type: string) => {
     switch (type) {
       case 'transfer_code_generated':
-        return 'border-l-blue-500 bg-blue-50 dark:bg-blue-900/20';
+        return 'border-l-blue-500 bg-blue-50 dark:bg-slate-700/30';
       case 'transfer_code_revoked':
-        return 'border-l-red-500 bg-red-50 dark:bg-red-900/20';
+        return 'border-l-red-500 bg-red-50 dark:bg-slate-700/30';
       case 'ownership_claimed':
-        return 'border-l-green-500 bg-green-50 dark:bg-green-900/20';
+        return 'border-l-green-500 bg-green-50 dark:bg-slate-700/30';
       default:
-        return 'border-l-gray-500 bg-gray-50 dark:bg-gray-700';
+        return 'border-l-gray-500 bg-gray-50 dark:bg-slate-700';
     }
   };
 
@@ -160,14 +160,22 @@ const NotificationCenter = () => {
           />
           
           {/* Dropdown */}
-          <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 z-50 max-h-96 overflow-hidden">
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Notifications
                 </h3>
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={loadNotifications}
+                    disabled={isLoading}
+                    className="p-1 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 disabled:opacity-50"
+                    title="Refresh notifications"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </button>
                   {unreadCount > 0 && (
                     <button
                       onClick={handleMarkAllAsRead}
@@ -199,13 +207,13 @@ const NotificationCenter = () => {
                   <p className="text-gray-500 dark:text-gray-400">No notifications yet</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                <div className="divide-y divide-gray-200 dark:divide-slate-700">
                   {notifications.map((notification) => (
                     <div
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-300 border-l-4 ${getNotificationColor(notification.type)} ${
-                        !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/10' : ''
+                      className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors duration-300 border-l-4 ${getNotificationColor(notification.type)} ${
+                        !notification.is_read ? 'bg-blue-50 dark:bg-slate-700/50' : ''
                       }`}
                     >
                       <div className="flex items-start space-x-3">
